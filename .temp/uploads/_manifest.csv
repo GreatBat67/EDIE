@@ -1,0 +1,16 @@
+POLICY_ID,POLICY_TYPE,NAMED_INSURED,EFFECTIVE_DATE,EXPIRATION_DATE,STATE,ANNUAL_PREMIUM
+APX-CMP-2024-10234,Commercial Multi-Peril,Riverside Bistro LLC,03/01/2024,03/01/2025,Columbus,8450
+APX-CMP-2024-10287,Commercial Multi-Peril,Prairie Hardware & Supply Co.,05/15/2024,05/15/2025,Wichita,6120
+APX-CMP-2024-11052,Commercial Multi-Peril,Lakeside Professional Plaza LLC,08/01/2024,08/01/2025,Milwaukee,11200
+APX-CMP-2025-13390,Commercial Multi-Peril,Sunbelt Logistics Warehouse Inc.,01/10/2025,01/10/2026,Dallas,15980
+APX-CMP-2025-14877,Commercial Multi-Peril,Peachtree Family Dental Group PC,06/01/2025,06/01/2026,Atlanta,5340
+APX-AUTO-2024-20114,Commercial Auto,Heartland Contracting Services LLC,02/15/2024,02/15/2025,Indianapolis,6840
+APX-AUTO-2024-20455,Commercial Auto,Gulf Coast Delivery Solutions Inc.,04/01/2024,04/01/2025,Houston,18250
+APX-AUTO-2025-21980,Commercial Auto,Blue Ridge Landscaping Co.,03/01/2025,03/01/2026,Charlotte,5610
+APX-AUTO-2025-22671,Commercial Auto,Route 66 Freight Movers LLC,07/15/2025,07/15/2026,Tulsa,21400
+APX-AUTO-2025-23108,Commercial Auto,Coastal Catering & Events LLC,09/01/2025,09/01/2026,Tampa,4980
+APX-HO3-2024-30215,Homeowners HO-3,Michael J. Donovan and Sarah K. Donovan,01/20/2024,01/20/2025,Naperville,2140
+APX-HO3-2024-30642,Homeowners HO-3,James T. Whitfield,04/10/2024,04/10/2025,Franklin,2680
+APX-HO3-2025-31890,Homeowners HO-3,Angela M. Cortez,02/01/2025,02/01/2026,Scottsdale,1890
+APX-HO3-2025-32517,Homeowners HO-3,Robert D. Kessler and Linda M. Kessler,05/20/2025,05/20/2026,Grand Rapids,2320
+APX-HO3-2026-33904,Homeowners HO-3,David C. Okonkwo,02/10/2026,02/10/2027,Birmingham,2450

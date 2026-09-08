@@ -1,0 +1,288 @@
+-- ============================================================
+-- INSURANCE AI HUB — FULL MIGRATION SCRIPT
+-- Source: FIUYNFQ.OP88690 (rj88085)
+-- Target: MYELFWV.VL56011
+-- ============================================================
+-- 
+-- MIGRATION STEPS:
+-- 1. Run Part 1 on TARGET account — creates all infrastructure
+-- 2. Export data from SOURCE using COPY INTO → download files
+-- 3. Upload files to TARGET and COPY INTO tables
+-- 4. Run Part 2 on TARGET — creates views, procedures, tasks, agent
+-- 5. Deploy Streamlit app on TARGET from workspace source code
+-- 6. Install Marketplace data on TARGET
+--
+-- ESTIMATED TIME: 30-60 minutes
+-- ============================================================
+
+-- ============================================================
+-- PART 0: PRE-REQUISITES ON TARGET ACCOUNT
+-- ============================================================
+-- Run these on the TARGET account (VL56011) as ACCOUNTADMIN
+
+-- Create warehouse
+CREATE WAREHOUSE IF NOT EXISTS COMPUTE_WH 
+    WAREHOUSE_SIZE = 'X-SMALL' 
+    AUTO_SUSPEND = 600 
+    AUTO_RESUME = TRUE;
+
+USE WAREHOUSE COMPUTE_WH;
+
+-- Enable cross-region inference for Cortex AI
+ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
+
+-- ============================================================
+-- PART 1: CREATE DATABASE + ALL SCHEMAS + TABLES (Run on TARGET)
+-- ============================================================
+
+CREATE OR REPLACE DATABASE INSURANCE_AI_HUB 
+    COMMENT='Insurance AI Hub (E.D.I.E.) — Enterprise Data & Intelligence Engine';
+
+-- Schemas
+CREATE SCHEMA IF NOT EXISTS INSURANCE_AI_HUB.ANALYTICS 
+    COMMENT='Core insurance analytics: customers, agents, policies, claims, billing, and retention risk';
+CREATE SCHEMA IF NOT EXISTS INSURANCE_AI_HUB.EXTERNAL_DATA 
+    COMMENT='Live marketplace data: weather, FEMA, FRED, CPI, hospital pricing';
+CREATE SCHEMA IF NOT EXISTS INSURANCE_AI_HUB.DATA_QUALITY 
+    COMMENT='Data quality rules, scores, column health, and observability';
+CREATE SCHEMA IF NOT EXISTS INSURANCE_AI_HUB.DOCUMENTS 
+    COMMENT='Policy documents, chunks, and RAG query log';
+CREATE SCHEMA IF NOT EXISTS INSURANCE_AI_HUB.ADMIN;
+
+-- ============================================================
+-- ANALYTICS SCHEMA — TABLES
+-- ============================================================
+USE SCHEMA INSURANCE_AI_HUB.ANALYTICS;
+
+-- NOTE: Run GET_DDL('DATABASE', 'INSURANCE_AI_HUB') on SOURCE account
+-- and execute the output here. The DDL is too large to embed inline.
+-- 
+-- Quick way to get it:
+-- SELECT GET_DDL('DATABASE', 'INSURANCE_AI_HUB');
+-- Copy the output and run it on the TARGET account.
+
+-- ============================================================
+-- PART 1B: EXPORT DATA FROM SOURCE (Run on SOURCE account rj88085)
+-- ============================================================
+
+-- Export each table to a stage for download
+-- Run these on the SOURCE account:
+
+/*
+CREATE OR REPLACE STAGE INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT;
+
+-- Export all analytics tables
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/AGENTS FROM INSURANCE_AI_HUB.ANALYTICS.AGENTS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/APPLICATIONS FROM INSURANCE_AI_HUB.ANALYTICS.APPLICATIONS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/AT_RISK_POLICIES FROM INSURANCE_AI_HUB.ANALYTICS.AT_RISK_POLICIES FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/BILLING FROM INSURANCE_AI_HUB.ANALYTICS.BILLING FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/CLAIMS FROM INSURANCE_AI_HUB.ANALYTICS.CLAIMS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/CLAIM_ACTIVITY_LOG FROM INSURANCE_AI_HUB.ANALYTICS.CLAIM_ACTIVITY_LOG FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/CUSTOMERS FROM INSURANCE_AI_HUB.ANALYTICS.CUSTOMERS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/CUSTOMER_ATTRIBUTE_HISTORY FROM INSURANCE_AI_HUB.ANALYTICS.CUSTOMER_ATTRIBUTE_HISTORY FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/CUSTOMER_SURVEYS FROM INSURANCE_AI_HUB.ANALYTICS.CUSTOMER_SURVEYS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/FINANCIAL_LEDGER FROM INSURANCE_AI_HUB.ANALYTICS.FINANCIAL_LEDGER FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/POLICIES FROM INSURANCE_AI_HUB.ANALYTICS.POLICIES FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/POLICY_CHANGE_LOG FROM INSURANCE_AI_HUB.ANALYTICS.POLICY_CHANGE_LOG FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/PROPERTY_CHARACTERISTICS FROM INSURANCE_AI_HUB.ANALYTICS.PROPERTY_CHARACTERISTICS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/REINSURANCE_RECOVERIES FROM INSURANCE_AI_HUB.ANALYTICS.REINSURANCE_RECOVERIES FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/REINSURANCE_TREATIES FROM INSURANCE_AI_HUB.ANALYTICS.REINSURANCE_TREATIES FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/VEHICLE_DETAILS FROM INSURANCE_AI_HUB.ANALYTICS.VEHICLE_DETAILS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/CHURN_PRESCRIPTIONS FROM INSURANCE_AI_HUB.ANALYTICS.CHURN_PRESCRIPTIONS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/PRICING_RECOMMENDATIONS FROM INSURANCE_AI_HUB.ANALYTICS.PRICING_RECOMMENDATIONS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/CLAIMS_FORECAST FROM INSURANCE_AI_HUB.ANALYTICS.CLAIMS_FORECAST FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/CLAIMS_COST_FORECAST FROM INSURANCE_AI_HUB.ANALYTICS.CLAIMS_COST_FORECAST FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/PREMIUM_FORECAST FROM INSURANCE_AI_HUB.ANALYTICS.PREMIUM_FORECAST FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/LOSS_RATIO_ANOMALIES FROM INSURANCE_AI_HUB.ANALYTICS.LOSS_RATIO_ANOMALIES FILE_FORMAT=(TYPE=PARQUET);
+
+-- Export DATA_QUALITY tables
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/DQ_RULES FROM INSURANCE_AI_HUB.DATA_QUALITY.DQ_RULES FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/DQ_RESULTS FROM INSURANCE_AI_HUB.DATA_QUALITY.DQ_RESULTS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/DQ_SCORES FROM INSURANCE_AI_HUB.DATA_QUALITY.DQ_SCORES FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/DQ_COLUMN_HEALTH FROM INSURANCE_AI_HUB.DATA_QUALITY.DQ_COLUMN_HEALTH FILE_FORMAT=(TYPE=PARQUET);
+
+-- Export DOCUMENTS tables
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/POLICY_DOCUMENTS FROM INSURANCE_AI_HUB.DOCUMENTS.POLICY_DOCUMENTS FILE_FORMAT=(TYPE=PARQUET);
+COPY INTO @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/DOCUMENT_CHUNKS FROM INSURANCE_AI_HUB.DOCUMENTS.DOCUMENT_CHUNKS FILE_FORMAT=(TYPE=PARQUET);
+
+-- Then GET all files to download locally:
+-- GET @INSURANCE_AI_HUB.ANALYTICS.MIGRATION_EXPORT/ file:///tmp/migration/;
+*/
+
+-- ============================================================
+-- PART 2: ROLES & RBAC (Run on TARGET)
+-- ============================================================
+
+CREATE ROLE IF NOT EXISTS EXECUTIVE;
+CREATE ROLE IF NOT EXISTS CLAIMS_ANALYST;
+CREATE ROLE IF NOT EXISTS UNDERWRITER;
+CREATE ROLE IF NOT EXISTS RETENTION_MANAGER;
+CREATE ROLE IF NOT EXISTS AGENCY_MANAGER;
+CREATE ROLE IF NOT EXISTS DATA_GOVERNANCE;
+
+-- Grant hierarchy
+GRANT ROLE EXECUTIVE TO ROLE ACCOUNTADMIN;
+GRANT ROLE CLAIMS_ANALYST TO ROLE ACCOUNTADMIN;
+GRANT ROLE UNDERWRITER TO ROLE ACCOUNTADMIN;
+GRANT ROLE RETENTION_MANAGER TO ROLE ACCOUNTADMIN;
+GRANT ROLE AGENCY_MANAGER TO ROLE ACCOUNTADMIN;
+GRANT ROLE DATA_GOVERNANCE TO ROLE ACCOUNTADMIN;
+
+-- Database + schema access for all roles
+GRANT USAGE ON DATABASE INSURANCE_AI_HUB TO ROLE EXECUTIVE;
+GRANT USAGE ON DATABASE INSURANCE_AI_HUB TO ROLE CLAIMS_ANALYST;
+GRANT USAGE ON DATABASE INSURANCE_AI_HUB TO ROLE UNDERWRITER;
+GRANT USAGE ON DATABASE INSURANCE_AI_HUB TO ROLE RETENTION_MANAGER;
+GRANT USAGE ON DATABASE INSURANCE_AI_HUB TO ROLE AGENCY_MANAGER;
+GRANT USAGE ON DATABASE INSURANCE_AI_HUB TO ROLE DATA_GOVERNANCE;
+
+GRANT USAGE ON ALL SCHEMAS IN DATABASE INSURANCE_AI_HUB TO ROLE EXECUTIVE;
+GRANT USAGE ON ALL SCHEMAS IN DATABASE INSURANCE_AI_HUB TO ROLE CLAIMS_ANALYST;
+GRANT USAGE ON ALL SCHEMAS IN DATABASE INSURANCE_AI_HUB TO ROLE UNDERWRITER;
+GRANT USAGE ON ALL SCHEMAS IN DATABASE INSURANCE_AI_HUB TO ROLE RETENTION_MANAGER;
+GRANT USAGE ON ALL SCHEMAS IN DATABASE INSURANCE_AI_HUB TO ROLE AGENCY_MANAGER;
+GRANT USAGE ON ALL SCHEMAS IN DATABASE INSURANCE_AI_HUB TO ROLE DATA_GOVERNANCE;
+
+GRANT SELECT ON ALL TABLES IN SCHEMA INSURANCE_AI_HUB.ANALYTICS TO ROLE EXECUTIVE;
+GRANT SELECT ON ALL TABLES IN SCHEMA INSURANCE_AI_HUB.ANALYTICS TO ROLE CLAIMS_ANALYST;
+GRANT SELECT ON ALL TABLES IN SCHEMA INSURANCE_AI_HUB.ANALYTICS TO ROLE UNDERWRITER;
+GRANT SELECT ON ALL TABLES IN SCHEMA INSURANCE_AI_HUB.ANALYTICS TO ROLE RETENTION_MANAGER;
+GRANT SELECT ON ALL TABLES IN SCHEMA INSURANCE_AI_HUB.ANALYTICS TO ROLE AGENCY_MANAGER;
+GRANT SELECT ON ALL TABLES IN SCHEMA INSURANCE_AI_HUB.ANALYTICS TO ROLE DATA_GOVERNANCE;
+GRANT SELECT ON ALL TABLES IN SCHEMA INSURANCE_AI_HUB.DATA_QUALITY TO ROLE DATA_GOVERNANCE;
+
+GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE EXECUTIVE;
+GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE CLAIMS_ANALYST;
+GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE UNDERWRITER;
+GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE RETENTION_MANAGER;
+GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE AGENCY_MANAGER;
+GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE DATA_GOVERNANCE;
+
+-- Cortex AI access
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE EXECUTIVE;
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE CLAIMS_ANALYST;
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE UNDERWRITER;
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE RETENTION_MANAGER;
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE AGENCY_MANAGER;
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE DATA_GOVERNANCE;
+
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_AGENT_USER TO ROLE EXECUTIVE;
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_AGENT_USER TO ROLE CLAIMS_ANALYST;
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_AGENT_USER TO ROLE UNDERWRITER;
+
+-- ============================================================
+-- PART 3: STAGES & STREAMS (Run on TARGET)
+-- ============================================================
+
+CREATE STAGE IF NOT EXISTS INSURANCE_AI_HUB.ANALYTICS.PDF_INTAKE_STAGE
+    DIRECTORY = (ENABLE = TRUE);
+
+CREATE OR REPLACE STREAM INSURANCE_AI_HUB.ANALYTICS.PDF_INTAKE_STREAM
+    ON STAGE INSURANCE_AI_HUB.ANALYTICS.PDF_INTAKE_STAGE;
+
+-- ============================================================
+-- PART 4: CORTEX AGENT (Run on TARGET)
+-- ============================================================
+-- NOTE: Semantic views and Cortex Search service must be created first
+-- The agent depends on these objects existing
+
+/*
+-- Create semantic views first (get DDL from source):
+-- SELECT GET_DDL('VIEW', 'INSURANCE_AI_HUB.ANALYTICS.INSURANCE_ANALYTICS');
+-- SELECT GET_DDL('VIEW', 'INSURANCE_AI_HUB.DATA_QUALITY.DATA_QUALITY_ANALYTICS');
+
+-- Then create the agent:
+CREATE OR REPLACE AGENT INSURANCE_AI_HUB.PUBLIC.EDIE
+  COMMENT = 'E.D.I.E. - Enterprise Data & Intelligence Engine'
+  FROM SPECIFICATION
+$$
+models:
+  orchestration: auto
+
+instructions:
+  response: "You are E.D.I.E. (Enterprise Data & Intelligence Engine). You help insurance professionals get instant answers about customers, policies, claims, billing, risk, policy documents, and data quality. Be concise and actionable. Format monetary values with $ and commas. When you use code execution, prefer visualizations and tables."
+  orchestration: "For questions about customers, policies, claims, billing, premiums, agents, or at-risk policies use the insurance_analytics tool. For questions about policy coverage, exclusions, or contract terms use the policy_search tool. For questions about data quality, DQ rules, scores, column health, or data trust use the dq_analytics tool. For complex calculations, statistical analysis, or visualizations use code execution."
+  sample_questions:
+    - question: "What is the total revenue at risk from churning auto policies?"
+    - question: "Does homeowners insurance cover sewer backup damage?"
+    - question: "Which DQ rules are failing most often?"
+    - question: "How many policies mention mold exclusions across all documents?"
+    - question: "Create a chart showing claims by month for the last year"
+
+orchestration:
+  capabilities:
+    analytical_search: true
+
+tools:
+  - tool_spec:
+      type: cortex_analyst_text_to_sql
+      name: insurance_analytics
+      description: "Use for structured data questions about insurance customers, agents, policies, claims, billing, premiums, fraud scores, and at-risk policies."
+  - tool_spec:
+      type: cortex_search
+      name: policy_search
+      description: "Use for questions about policy document content including coverage terms, exclusions, endorsements, riders, deductibles, and contract language."
+  - tool_spec:
+      type: cortex_analyst_text_to_sql
+      name: dq_analytics
+      description: "Use for questions about data quality rules, DQ scores, column health, null rates, outlier rates, failing rules, and data trust monitoring."
+  - tool_spec:
+      type: code_execution
+      name: code_execution
+      description: "Use for complex calculations, statistical analysis, data transformations, and creating visualizations like charts and graphs."
+
+tool_resources:
+  insurance_analytics:
+    semantic_view: INSURANCE_AI_HUB.ANALYTICS.INSURANCE_ANALYTICS
+    warehouse: COMPUTE_WH
+  policy_search:
+    search_service: INSURANCE_AI_HUB.DOCUMENTS.POLICY_SEARCH_SERVICE
+    max_results: "10"
+  dq_analytics:
+    semantic_view: INSURANCE_AI_HUB.DATA_QUALITY.DATA_QUALITY_ANALYTICS
+    warehouse: COMPUTE_WH
+$$;
+*/
+
+-- ============================================================
+-- PART 5: MARKETPLACE DATA (Install on TARGET manually)
+-- ============================================================
+-- Go to Snowflake Marketplace on the TARGET account and install:
+-- 1. Snowflake Public Data Free (weather, FEMA, etc.)
+-- 2. FRED Federal Reserve Economic Data
+-- 3. Healthparse Hospital Price Transparency
+--
+-- Then recreate the EXTERNAL_DATA views that reference them.
+-- Get the view DDL from source:
+-- SELECT GET_DDL('SCHEMA', 'INSURANCE_AI_HUB.EXTERNAL_DATA');
+
+-- ============================================================
+-- PART 6: PER-USER QUOTA (Run on TARGET)
+-- ============================================================
+CREATE SNOWFLAKE.CORE.QUOTA INSURANCE_AI_HUB.ADMIN.AI_USAGE_QUOTA();
+CALL INSURANCE_AI_HUB.ADMIN.AI_USAGE_QUOTA!ADD_SHARED_RESOURCE('AI FUNCTION');
+CALL INSURANCE_AI_HUB.ADMIN.AI_USAGE_QUOTA!ADD_SHARED_RESOURCE('CORTEX AGENT');
+CALL INSURANCE_AI_HUB.ADMIN.AI_USAGE_QUOTA!SET_PER_USER_LIMIT(10);
+CALL INSURANCE_AI_HUB.ADMIN.AI_USAGE_QUOTA!SET_BLOCK_ENFORCEMENT_ENABLED(TRUE, TRUE);
+
+-- ============================================================
+-- PART 7: STREAMLIT APP DEPLOYMENT
+-- ============================================================
+-- 1. Copy the entire edie-dashboard/ folder to a workspace on the TARGET account
+-- 2. Open the workspace and click Run
+-- OR use Snowflake CLI:
+--   snow streamlit deploy --project edie-dashboard/
+
+-- ============================================================
+-- MIGRATION CHECKLIST
+-- ============================================================
+-- [ ] Part 0: Warehouse + cross-region inference on TARGET
+-- [ ] Part 1: GET_DDL('DATABASE', 'INSURANCE_AI_HUB') → run on TARGET
+-- [ ] Part 1B: Export data (COPY INTO parquet) → download → upload to TARGET → COPY INTO
+-- [ ] Part 2: Roles & RBAC grants
+-- [ ] Part 3: Stages & streams
+-- [ ] Part 4: Semantic views + Cortex Search + Agent
+-- [ ] Part 5: Install Marketplace listings
+-- [ ] Part 6: Per-user quotas
+-- [ ] Part 7: Deploy Streamlit app
+-- [ ] Verify: Run dashboard, test chatbot, check all 12 pages

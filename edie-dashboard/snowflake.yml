@@ -1,0 +1,27 @@
+# created-by: streamlit-in-workspaces; skill-version=1.0.0
+definition_version: 2
+entities:
+  streamlit_app:
+    type: streamlit
+    query_warehouse: "COMPUTE_WH"
+    compute_pool: "SYSTEM_COMPUTE_POOL_CPU"
+    main_file: streamlit_app.py
+    artifacts:
+      - pyproject.toml
+      - streamlit_app.py
+      - .streamlit/config.toml
+      - utils/__init__.py
+      - utils/rbac.py
+      - utils/queries.py
+      - app_pages/executive_kpis.py
+      - app_pages/claims_intel.py
+      - app_pages/policy_pricing.py
+      - app_pages/customer_retention.py
+      - app_pages/voice_of_customer.py
+      - app_pages/risk_map.py
+      - app_pages/chatbot_hub.py
+      - app_pages/alerts.py
+      - app_pages/data_quality.py
+      - app_pages/analytics_builder.py
+      - app_pages/research_predict.py
+      - app_pages/document_intake.py

@@ -1,0 +1,235 @@
+name: DATA_QUALITY_ANALYTICS
+description: Data quality observability for the Insurance AI Hub. Monitors rule execution,
+  table-level quality scores across 5 dimensions, and column-level health including
+  null rates, duplicate rates, and outlier rates.
+tables:
+  - name: DQ_RULES
+    description: Data quality rule definitions with SQL expressions, thresholds, severity,
+      and target table/column mappings
+    base_table:
+      database: INSURANCE_AI_HUB
+      schema: DATA_QUALITY
+      table: DQ_RULES
+    primary_key:
+      columns:
+        - RULE_ID
+    dimensions:
+      - name: RULE_ID
+        expr: RULE_ID
+        data_type: VARCHAR
+      - name: RULE_NAME
+        expr: RULE_NAME
+        data_type: VARCHAR
+      - name: RULE_DESCRIPTION
+        expr: RULE_DESCRIPTION
+        data_type: VARCHAR
+      - name: TARGET_SCHEMA
+        expr: TARGET_SCHEMA
+        data_type: VARCHAR
+      - name: TARGET_TABLE
+        expr: TARGET_TABLE
+        data_type: VARCHAR
+      - name: TARGET_COLUMN
+        expr: TARGET_COLUMN
+        data_type: VARCHAR
+      - name: RULE_TYPE
+        expr: RULE_TYPE
+        data_type: VARCHAR
+      - name: SEVERITY
+        expr: SEVERITY
+        data_type: VARCHAR
+      - name: IS_ACTIVE
+        expr: IS_ACTIVE
+        data_type: BOOLEAN
+    facts:
+      - name: THRESHOLD
+        expr: THRESHOLD
+        data_type: NUMBER
+  - name: DQ_RESULTS
+    description: DQ rule execution results with pass/fail counts, pass rates, error
+      samples, and execution metadata
+    base_table:
+      database: INSURANCE_AI_HUB
+      schema: DATA_QUALITY
+      table: DQ_RESULTS
+    primary_key:
+      columns:
+        - RESULT_ID
+    foreign_keys:
+      - fkey_columns:
+          - RULE_ID
+        pkey_table:
+          database: INSURANCE_AI_HUB
+          schema: DATA_QUALITY
+          table: DQ_RULES
+        pkey_columns:
+          - RULE_ID
+    dimensions:
+      - name: RESULT_ID
+        expr: RESULT_ID
+        data_type: VARCHAR
+      - name: RULE_ID
+        expr: RULE_ID
+        data_type: VARCHAR
+      - name: TARGET_TABLE
+        expr: TARGET_TABLE
+        data_type: VARCHAR
+      - name: TOTAL_RECORDS
+        expr: TOTAL_RECORDS
+        data_type: NUMBER
+      - name: PASSED_RECORDS
+        expr: PASSED_RECORDS
+        data_type: NUMBER
+      - name: FAILED_RECORDS
+        expr: FAILED_RECORDS
+        data_type: NUMBER
+      - name: STATUS
+        expr: STATUS
+        data_type: VARCHAR
+      - name: EXECUTION_TIME_MS
+        expr: EXECUTION_TIME_MS
+        data_type: NUMBER
+      - name: RUN_BY
+        expr: RUN_BY
+        data_type: VARCHAR
+    time_dimensions:
+      - name: RUN_DATE
+        expr: RUN_DATE
+        data_type: TIMESTAMP_NTZ
+    facts:
+      - name: PASS_RATE
+        expr: PASS_RATE
+        data_type: NUMBER
+  - name: DQ_SCORES
+    description: Daily table-level data quality scores across 5 dimensions with trend
+      indicators
+    base_table:
+      database: INSURANCE_AI_HUB
+      schema: DATA_QUALITY
+      table: DQ_SCORES
+    primary_key:
+      columns:
+        - SCORE_ID
+    dimensions:
+      - name: SCORE_ID
+        expr: SCORE_ID
+        data_type: VARCHAR
+      - name: SCHEMA_NAME
+        expr: SCHEMA_NAME
+        data_type: VARCHAR
+      - name: TABLE_NAME
+        expr: TABLE_NAME
+        data_type: VARCHAR
+      - name: TREND
+        expr: TREND
+        data_type: VARCHAR
+      - name: RECORDS_ASSESSED
+        expr: RECORDS_ASSESSED
+        data_type: NUMBER
+      - name: RULES_EVALUATED
+        expr: RULES_EVALUATED
+        data_type: NUMBER
+    time_dimensions:
+      - name: SCORE_DATE
+        expr: SCORE_DATE
+        data_type: DATE
+    facts:
+      - name: COMPLETENESS_SCORE
+        expr: COMPLETENESS_SCORE
+        data_type: NUMBER
+      - name: UNIQUENESS_SCORE
+        expr: UNIQUENESS_SCORE
+        data_type: NUMBER
+      - name: VALIDITY_SCORE
+        expr: VALIDITY_SCORE
+        data_type: NUMBER
+      - name: TIMELINESS_SCORE
+        expr: TIMELINESS_SCORE
+        data_type: NUMBER
+      - name: CONSISTENCY_SCORE
+        expr: CONSISTENCY_SCORE
+        data_type: NUMBER
+      - name: OVERALL_SCORE
+        expr: OVERALL_SCORE
+        data_type: NUMBER
+  - name: DQ_COLUMN_HEALTH
+    description: Weekly column-level health metrics including null rates, duplicates,
+      outliers, and overall health scores
+    base_table:
+      database: INSURANCE_AI_HUB
+      schema: DATA_QUALITY
+      table: DQ_COLUMN_HEALTH
+    primary_key:
+      columns:
+        - HEALTH_ID
+    dimensions:
+      - name: HEALTH_ID
+        expr: HEALTH_ID
+        data_type: VARCHAR
+      - name: SCHEMA_NAME
+        expr: SCHEMA_NAME
+        data_type: VARCHAR
+      - name: TABLE_NAME
+        expr: TABLE_NAME
+        data_type: VARCHAR
+      - name: COLUMN_NAME
+        expr: COLUMN_NAME
+        data_type: VARCHAR
+      - name: DISTINCT_COUNT
+        expr: DISTINCT_COUNT
+        data_type: NUMBER
+      - name: STATUS
+        expr: STATUS
+        data_type: VARCHAR
+    time_dimensions:
+      - name: CHECK_DATE
+        expr: CHECK_DATE
+        data_type: DATE
+    facts:
+      - name: NULL_RATE
+        expr: NULL_RATE
+        data_type: NUMBER
+      - name: DUPLICATE_RATE
+        expr: DUPLICATE_RATE
+        data_type: NUMBER
+      - name: OUTLIER_RATE
+        expr: OUTLIER_RATE
+        data_type: NUMBER
+      - name: HEALTH_SCORE
+        expr: HEALTH_SCORE
+        data_type: NUMBER
+      - name: DATA_TYPE_CONSISTENCY
+        expr: DATA_TYPE_CONSISTENCY
+        data_type: NUMBER
+relationships:
+  - name: DQ_RESULTS_TO_DQ_RULES
+    left_table: DQ_RESULTS
+    right_table: DQ_RULES
+    join_type: inner
+    relationship_type: many_to_one
+    relationship_columns:
+      - left_column: RULE_ID
+        right_column: RULE_ID
+verified_queries:
+  - name: 0;1
+    question: Which data quality rules are failing most often?
+    sql: SELECT r.RULE_NAME, r.TARGET_TABLE, r.SEVERITY, COUNT(*) AS fail_count FROM
+      dq_results AS res JOIN dq_rules AS r ON res.RULE_ID = r.RULE_ID WHERE res.STATUS
+      = 'Fail' GROUP BY r.RULE_NAME, r.TARGET_TABLE, r.SEVERITY ORDER BY fail_count
+      DESC
+    verified_at: 1787830152
+    verified_by: Semantic Model Generator
+  - name: 1;1
+    question: What are the current data quality scores for each table?
+    sql: SELECT TABLE_NAME, OVERALL_SCORE, COMPLETENESS_SCORE, VALIDITY_SCORE, TIMELINESS_SCORE,
+      TREND FROM dq_scores QUALIFY ROW_NUMBER() OVER (PARTITION BY TABLE_NAME ORDER
+      BY SCORE_DATE DESC) = 1 ORDER BY OVERALL_SCORE
+    verified_at: 1787830152
+    verified_by: Semantic Model Generator
+  - name: 2;1
+    question: Which columns have the worst health scores?
+    sql: SELECT TABLE_NAME, COLUMN_NAME, AVG(NULL_RATE) AS avg_null_rate, AVG(HEALTH_SCORE)
+      AS avg_health FROM dq_column_health GROUP BY TABLE_NAME, COLUMN_NAME ORDER BY
+      avg_health LIMIT 10
+    verified_at: 1787830152
+    verified_by: Semantic Model Generator

@@ -1,0 +1,86 @@
+branch_data:
+  dcm_project:
+    approvers: []
+    dcm_dir: dcm_edie
+    dcm_target: EDIE_DCM_METADATA
+    is_default: true
+    is_default_target: true
+    is_default_true: true
+    require_pr: false
+    required_approvals: 0
+    sf_databases:
+    - EDIE_CICD_METADATA
+    sf_roles:
+    - DBA_ADMIN
+    - DBA_FR
+    sf_schemas:
+    - DCM_CONFIG
+    sf_user: github_edie_project_user
+  dev:
+    approvers: []
+    dcm_dir: dcm_edie
+    dcm_target: EDIE_DCM_dev
+    require_pr: false
+    required_approvals: 0
+    sf_databases:
+    - EDIE_DEVOPS_DB_dev
+    sf_roles:
+    - DBA_ADMIN
+    - DBA_FR
+    sf_schemas: &id001
+    - abc
+    sf_user: github_edie_dev_user
+  qa:
+    approvers:
+    - GreatBat67
+    dcm_dir: dcm_edie
+    dcm_target: EDIE_DCM_qa
+    require_pr: true
+    required_approvals: 1
+    sf_databases:
+    - EDIE_DEVOPS_DB_qa
+    sf_roles:
+    - DBA_ADMIN
+    - DBA_FR
+    sf_schemas: *id001
+    sf_user: github_edie_qa_user
+branch_sequence:
+- dev
+- qa
+- dcm_project
+collaborators: []
+dcm_dir: dcm_edie
+dcm_project_name: dcm_edie
+escape_protection_branches: []
+github:
+  files_to_copy:
+  - requirements.txt
+  - snowflake.toml
+  folders_to_copy:
+  - Projects
+  - dcm_scripts_template
+  - helper_scripts
+  repo_visibility: public
+  source_branch: main
+  source_repository: https://github.com/kipibi/CI_CD_STANDARD_TIER_OFFERING_TEMPLATE
+owner: GreatBat67
+project: EDIE
+project_description: Snowflake Gated GitOps Core Offering
+repo_name: EDIE
+roles:
+  DBA_ADMIN:
+    create: true
+    ownership: true
+    read: true
+  DBA_FR:
+    create: true
+    ownership: false
+    read: true
+setup_dbt: false
+setup_dcm: true
+setup_repo: true
+setup_snowflake: true
+snowflake_global:
+  account_identifier: fiuynfq-op88690
+  admin_role: ACCOUNTADMIN
+  warehouse: github_cicd_demo_wh

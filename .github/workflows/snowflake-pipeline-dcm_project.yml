@@ -1,0 +1,43 @@
+name: "Snowflake Component: Progression Target - dcm_project"
+on:
+  workflow_call:
+    inputs:
+      action_type:
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  SNOWFLAKE_ACCOUNT: "fiuynfq-op88690"
+  SNOWFLAKE_USER: "github_edie_project_user"
+  SNOWFLAKE_ROLE: "ACCOUNTADMIN"
+  SNOWFLAKE_WAREHOUSE: "github_cicd_demo_wh"
+  SNOWFLAKE_CLI_FEATURES_ENABLE_SNOWFLAKE_PROJECTS: "true"
+  SNOWFLAKE_DATABASE: "EDIE_CICD_METADATA"
+  SNOWFLAKE_SCHEMA: "DCM_CONFIG"
+
+jobs:
+  dcm_project-environment-execution:
+    runs-on: ubuntu-latest
+    environment: dcm_project 
+    steps:
+      - uses: actions/checkout@v4
+
+      - if: inputs.action_type == 'plan'
+        name: "DCM Plan — Dry-run against DCM_PROJECT target only"
+        uses: ./.github/workflows/modules/action-dcm-engine
+        with:
+          dcm_dir: "dcm_edie"
+          dcm_target: "EDIE_DCM_METADATA"
+          action_type: "plan"
+
+      - if: inputs.action_type == 'deploy'
+        name: "DCM Deploy — Apply changes to DCM_PROJECT target only"
+        uses: ./.github/workflows/modules/action-dcm-engine
+        with:
+          dcm_dir: "dcm_edie"
+          dcm_target: "EDIE_DCM_METADATA"
+          action_type: "deploy"
